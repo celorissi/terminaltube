@@ -53,3 +53,33 @@ Ao clonar o repositório, encontrará a seguinte organização de ficheiros:
 | **`.gitignore`** | Define ficheiros e pastas ignoradas pelo Git (ex: ambiente virtual `venv/`, pasta local `media/` e caches). |
 | **`.dockerignore`** | Otimiza o build do Docker ignorando ficheiros desnecessários para a imagem. |
 | **`LICENSE`** | Ficheiro de licenciamento do projeto sob os termos da licença **MIT**. |
+
+Markdown
+## 🚀 Instalação e Execução
+
+Para executar o TerminalTube localmente utilizando o Docker, siga os passos abaixo:
+
+### 1. Clonar o repositório
+```bash
+git clone [https://github.com/celorissi/terminaltube.git](https://github.com/celorissi/terminaltube.git)
+cd terminaltube
+2. Iniciar com o Docker Compose
+Certifique-se de que tem o Docker e o Docker Compose instalados no seu sistema, depois execute:
+
+Bash
+docker compose up --build -d
+3. Aceder à aplicação
+Abra o seu browser e aceda a:
+👉 http://localhost:8200
+
+Para verificar se o container está a ser executado corretamente, pode consultar os logs com:
+
+Bash
+docker logs -f terminaltube
+
+---
+
+<Elicitations message="O que gostaria de ajustar no repositório a seguir?">
+  <Elicitation label="Adicionar secção de configuração e volumes" query="Como posso adicionar instruções sobre a pasta de volumes e multimédia no README.md?"/>
+  <Elicitation label="Criar um guia de contribuição" query="Como posso estruturar um ficheiro CONTRIBUTING.md para o meu repositório?"/>
+</Elicitations>
