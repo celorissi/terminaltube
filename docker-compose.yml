@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  terminaltube:
+    image: dockerrissi/terminaltube:latest
+    container_name: terminaltube
+    ports:
+      - "8200:80"
+    volumes:
+      - ./media:/app/media
+    restart: unless-stopped
