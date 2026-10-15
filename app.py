@@ -1,9 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.4 (Systemd)
-# Data: Outubro 2026
-# Descrição: Dashboard multimédia com monitor
-#            de espaço, seletores, nome personalizado,
-#            ignorar playlist e renomeação direta.
+# TerminalTube - Versão 2.4.1 (Corrigida Docker/Linux)
 # ==========================================
 
 from fastapi import FastAPI, BackgroundTasks, Form
@@ -18,11 +14,16 @@ import shutil
 
 app = FastAPI()
 
-DIRETORIO_RAIZ = '/home/marcelo/laboratorios/yt-dlp/media'
+# Definição de caminhos adaptativa (funciona tanto no Docker /app como em ambiente nativo)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DIRETORIO_RAIZ = os.environ.get("TERMINALTUBE_MEDIA", os.path.join(BASE_DIR, 'media'))
+
 DIRETORIO_MUSICAS = os.path.join(DIRETORIO_RAIZ, 'audio/musicas')
 DIRETORIO_ALBUNS = os.path.join(DIRETORIO_RAIZ, 'audio/albuns')
 DIRETORIO_VIDEOS = os.path.join(DIRETORIO_RAIZ, 'video/mp4')
-BIN_YTDLP = '/home/marcelo/laboratorios/yt-dlp/venv/bin/yt-dlp'
+
+# Se estiver no Docker, o executável está no PATH global. Se for local, aponta para o venv.
+BIN_YTDLP = 'yt-dlp' if os.path.exists('/app') else os.path.join(BASE_DIR, 'venv/bin/yt-dlp')
 
 
 
