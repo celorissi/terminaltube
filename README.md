@@ -36,3 +36,20 @@ Recomendado para servidores, NAS ou Raspberry Pi.
        volumes:
          - ./media:/app/media
        restart: unless-stopped
+
+## 📂 Estrutura do Projeto
+
+Ao clonar o repositório, encontrará a seguinte organização de ficheiros:
+
+| Ficheiro / Pasta | Descrição |
+| :--- | :--- |
+| **`app.py`** | Código principal da aplicação em **FastAPI** (gere a interface web, rotas, lógica de download com `yt-dlp` e monitor de armazenamento). |
+| **`requirements.txt`** | Lista de dependências Python necessárias (`fastapi`, `uvicorn`, `yt-dlp`, `python-multipart`). |
+| **`install.py`** | Script auxiliar em Python que automatiza a criação do ambiente virtual (`venv`) e a instalação das dependências em Linux. |
+| **`start.sh`** | Script de arranque rápido para sistemas Linux e Raspberry Pi (`./start.sh`) que ativa o ambiente e inicia o servidor web. |
+| **`Dockerfile`** | Configuração oficial para empacotar a aplicação num container Docker otimizado (Python 3.11 slim + FFmpeg). |
+| **`docker-compose.yml`** | Ficheiro de orquestração para subir o serviço rapidamente via Docker (`docker compose up -d`). |
+| **`.github/workflows/`** | Automação (CI/CD) do GitHub Actions para compilar e publicar automaticamente imagens multi-arquitetura no Docker Hub. |
+| **`.gitignore`** | Define ficheiros e pastas ignoradas pelo Git (ex: ambiente virtual `venv/`, pasta local `media/` e caches). |
+| **`.dockerignore`** | Otimiza o build do Docker ignorando ficheiros desnecessários para a imagem. |
+| **`LICENSE`** | Ficheiro de licenciamento do projeto sob os termos da licença **MIT**. |
