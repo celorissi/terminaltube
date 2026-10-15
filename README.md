@@ -1,4 +1,7 @@
 # TerminalTube 🚀
+<p align="center">
+  <img src="assets/terminaltube.png" alt="TerminalTube Dashboard" width="100%">
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Python-3.11%2B-blue?style=flat-square&logo=python&logoColor=white" alt="Python Version">
