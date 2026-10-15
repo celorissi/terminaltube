@@ -20,10 +20,10 @@ O **TerminalTube** é um painel web leve, moderno e autónomo desenvolvido em **
 
 ---
 
-## 🛠️ Guia de Instalação Prática
+## 🚀 Instalação e Execução
 
-### Opção A: A forma mais rápida (Via Docker)
-Recomendado para servidores, NAS ou Raspberry Pi.
+### Opção A: A forma mais rápida (Via Imagem Oficial)
+Ideal para quem quer apenas correr o container rapidamente sem clonar o código-fonte:
 
 1. Crie um ficheiro chamado `docker-compose.yml`:
    ```yaml
@@ -32,10 +32,40 @@ Recomendado para servidores, NAS ou Raspberry Pi.
        image: dockerrissi/terminaltube:latest
        container_name: terminaltube
        ports:
-         - "8200:80"
+         - "8200:8200"
        volumes:
          - ./media:/app/media
        restart: unless-stopped
+   ```
+2. Inicie o container:
+   ```bash
+   docker compose up -d
+   ```
+
+### Opção B: Clonar e Executar (Desenvolvimento / Build Local)
+Ideal para ambientes como o Raspberry Pi onde deseja compilar localmente a partir do código:
+
+1. **Clonar o repositório:**
+   ```bash
+   git clone https://github.com/celorissi/terminaltube.git
+   cd terminaltube
+   ```
+
+2. **Iniciar com o Docker Compose:**
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. **Aceder à aplicação:**
+   Abra o seu browser e aceda a:
+   👉 **`http://localhost:8200`**
+
+Para verificar se o container está a ser executado corretamente, pode consultar os logs com:
+```bash
+docker logs -f terminaltube
+```
+
+---
 
 ## 📂 Estrutura do Projeto
 
@@ -54,32 +84,9 @@ Ao clonar o repositório, encontrará a seguinte organização de ficheiros:
 | **`.dockerignore`** | Otimiza o build do Docker ignorando ficheiros desnecessários para a imagem. |
 | **`LICENSE`** | Ficheiro de licenciamento do projeto sob os termos da licença **MIT**. |
 
-Markdown
-## 🚀 Instalação e Execução
-
-Para executar o TerminalTube localmente utilizando o Docker, siga os passos abaixo:
-
-### 1. Clonar o repositório
-```bash
-git clone [https://github.com/celorissi/terminaltube.git](https://github.com/celorissi/terminaltube.git)
-cd terminaltube
-2. Iniciar com o Docker Compose
-Certifique-se de que tem o Docker e o Docker Compose instalados no seu sistema, depois execute:
-
-Bash
-docker compose up --build -d
-3. Aceder à aplicação
-Abra o seu browser e aceda a:
-👉 http://localhost:8200
-
-Para verificar se o container está a ser executado corretamente, pode consultar os logs com:
-
-Bash
-docker logs -f terminaltube
-
 ---
 
-### 🧹 Desinstalação e Limpeza Completa (Do Zero)
+## 🧹 Desinstalação e Limpeza Completa (Do Zero)
 
 Se precisar de remover completamente a aplicação, apagar todos os volumes de dados e limpar as imagens Docker associadas para reiniciar num estado totalmente limpo, execute os seguintes comandos na raiz do projeto:
 
@@ -87,19 +94,17 @@ Se precisar de remover completamente a aplicação, apagar todos os volumes de d
    ```bash
    docker compose down -v --remove-orphans
    ```
-Verificação: O terminal deve confirmar a remoção do container e da rede associada.
+   *(O terminal deve confirmar a remoção do container e da rede associada).*
 
-Remover a imagem Docker local:
+2. **Remover a imagem Docker local:**
+   ```bash
+   docker rmi terminaltube-terminaltube dockerrissi/terminaltube:latest --force 2>/dev/null
+   ```
+   *(O terminal confirmará a eliminação das camadas de imagem armazenadas).*
 
-```Bash
-docker rmi terminaltube-terminaltube dockerrissi/terminaltube:latest --force 2>/dev/null
-```
-Verificação: O terminal confirmará a eliminação das camadas de imagem armazenadas.
-
-Limpar diretoria de multimédia (opcional):
-Caso queira apagar também todos os ficheiros descarregados guardados no volume local:
-
-```Bash
-rm -rf media/
-```
-Verificação: Execute ls -la para garantir que a pasta foi removida com sucesso.
+3. **Limpar diretoria de multimédia (opcional):**
+   Caso queira apagar também todos os ficheiros descarregados guardados no volume local:
+   ```bash
+   rm -rf media/
+   ```
+   *(Execute `ls -la` para garantir que a pasta foi removida com sucesso).*
