@@ -5,7 +5,7 @@ services:
     image: dockerrissi/terminaltube:latest
     container_name: terminaltube
     ports:
-      - "8200:80"
+      - "8200:8200"
     volumes:
       - ./media:/app/media
     restart: unless-stopped
