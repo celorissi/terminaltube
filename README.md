@@ -79,7 +79,3 @@ docker logs -f terminaltube
 
 ---
 
-<Elicitations message="O que gostaria de ajustar no repositório a seguir?">
-  <Elicitation label="Adicionar secção de configuração e volumes" query="Como posso adicionar instruções sobre a pasta de volumes e multimédia no README.md?"/>
-  <Elicitation label="Criar um guia de contribuição" query="Como posso estruturar um ficheiro CONTRIBUTING.md para o meu repositório?"/>
-</Elicitations>
