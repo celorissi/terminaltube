@@ -79,3 +79,24 @@ docker logs -f terminaltube
 
 ---
 
+### 🧹 Desinstalação e Limpeza Completa (Do Zero)
+
+Se precisar de remover completamente a aplicação, apagar todos os volumes de dados e limpar as imagens Docker associadas para reiniciar num estado totalmente limpo, execute os seguintes comandos na raiz do projeto:
+
+1. **Parar e remover os containers e volumes:**
+   ```bash
+   docker compose down -v --remove-orphans
+Verificação: O terminal deve confirmar a remoção do container e da rede associada.
+
+Remover a imagem Docker local:
+
+Bash
+docker rmi terminaltube-terminaltube dockerrissi/terminaltube:latest --force 2>/dev/null
+Verificação: O terminal confirmará a eliminação das camadas de imagem armazenadas.
+
+Limpar diretoria de multimédia (opcional):
+Caso queira apagar também todos os ficheiros descarregados guardados no volume local:
+
+Bash
+rm -rf media/
+Verificação: Execute ls -la para garantir que a pasta foi removida com sucesso.
