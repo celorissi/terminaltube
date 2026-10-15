@@ -1,5 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.4.5 (Definitiva & Corrigida)
+# TerminalTube - Versão 2.4.6 (Com Seleção em Massa)
 # Data: Outubro 2026
 # ==========================================
 
@@ -15,7 +15,6 @@ import shutil
 
 app = FastAPI()
 
-# Definição de caminhos adaptativa (funciona tanto no Docker /app como em ambiente nativo)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DIRETORIO_RAIZ = os.environ.get("TERMINALTUBE_MEDIA", os.path.join(BASE_DIR, 'media'))
 
@@ -23,7 +22,6 @@ DIRETORIO_MUSICAS = os.path.join(DIRETORIO_RAIZ, 'audio/musicas')
 DIRETORIO_ALBUNS = os.path.join(DIRETORIO_RAIZ, 'audio/albuns')
 DIRETORIO_VIDEOS = os.path.join(DIRETORIO_RAIZ, 'video/mp4')
 
-# Binário do yt-dlp adaptado ao ambiente
 BIN_YTDLP = 'yt-dlp' if os.path.exists('/app') else os.path.join(BASE_DIR, 'venv/bin/yt-dlp')
 
 processo_atual = None
@@ -56,7 +54,7 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
             formato_str = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best'
         elif param_qualidade == "480p":
             formato_str = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best'
-        else: # "max"
+        else:
             formato_str = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
 
         cmd = [
@@ -80,7 +78,7 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
             '--ignore-errors',
             url
         ]
-    else: # playlist_completa
+    else:
         pasta_destino = DIRETORIO_MUSICAS
         cmd = [
             BIN_YTDLP,
@@ -253,45 +251,48 @@ def home():
     limpar_albuns = f'<form action="/limpar-pasta" method="post" style="margin:0;"><input type="hidden" name="pasta" value="albuns"><button type="submit" class="danger-btn" style="padding: 6px 12px; font-size: 13px; width: auto;">Limpar Tudo</button></form>' if lista_albuns else ''
     limpar_videos = f'<form action="/limpar-pasta" method="post" style="margin:0;"><input type="hidden" name="pasta" value="videos"><button type="submit" class="danger-btn" style="padding: 6px 12px; font-size: 13px; width: auto;">Limpar Tudo</button></form>' if lista_videos else ''
 
-    # String normal HTML para evitar qualquer erro de f-string nas chavetas do CSS
-    html_template = """
+    return f"""
     <html>
         <head>
             <title>TerminalTube [v2.4]</title>
             <meta charset="utf-8">
             <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23121212%22/><text x=%2250%%22 y=%2262%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22monospace%22 font-weight=%22bold%22 font-size=%2250%22 fill=%22%231db954%22>%3E_</text></svg>">
-            __META_REFRESH__
+            {meta_refresh}
             <style>
-                body { font-family: Arial, sans-serif; background: #121212; color: #fff; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 30px; box-sizing: border-box; }
-                .container { width: 950px; display: flex; flex-direction: column; gap: 20px; }
-                .card { background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }
-                h2, h3 { margin-top: 0; color: #1db954; text-align: center; }
-                h3 { text-align: left; font-size: 16px; color: #fff; }
-                input[type="text"], select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #444; background: #2b2b2b; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
-                select { cursor: pointer; }
-                button { background: #1db954; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: background 0.3s; margin-top: 10px; }
-                button:hover { background: #1aa34a; }
-                .secondary-btn { background: #333; font-size: 13px; padding: 6px 12px; width: auto; margin: 0; }
-                .secondary-btn:hover { background: #444; }
-                .danger-btn { background: #d9534f !important; }
-                .danger-btn:hover { background: #c9302c !important; }
-                table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }
-                th, td { padding: 8px; border-bottom: 1px solid #333; text-align: left; }
-                .file-list { max-height: 200px; overflow-y: auto; display: block; }
-                table { display: table; width: 100%; }
-                .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 8px; }
-                .actions-bar { display: flex; gap: 10px; align-items: center; }
-                .storage-bar { background: #252525; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }
+                body {{ font-family: Arial, sans-serif; background: #121212; color: #fff; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 30px; box-sizing: border-box; }}
+                .container {{ width: 950px; display: flex; flex-direction: column; gap: 20px; }}
+                .card {{ background: #1e1e1e; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }}
+                h2, h3 {{ margin-top: 0; color: #1db954; text-align: center; }}
+                h3 {{ text-align: left; font-size: 16px; color: #fff; }}
+                input[type="text"], select {{ width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #444; background: #2b2b2b; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; }}
+                select {{ cursor: pointer; }}
+                button {{ background: #1db954; color: white; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 16px; transition: background 0.3s; margin-top: 10px; }}
+                button:hover {{ background: #1aa34a; }}
+                .secondary-btn {{ background: #333; font-size: 13px; padding: 6px 12px; width: auto; margin: 0; }}
+                .secondary-btn:hover {{ background: #444; }}
+                .danger-btn {{ background: #d9534f !important; }}
+                .danger-btn:hover {{ background: #c9302c !important; }}
+                table {{ width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13px; }}
+                th, td {{ padding: 8px; border-bottom: 1px solid #333; text-align: left; }}
+                .file-list {{ max-height: 200px; overflow-y: auto; display: block; }}
+                table {{ display: table; width: 100%; }}
+                .section-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 8px; }}
+                .actions-bar {{ display: flex; gap: 8px; align-items: center; }}
+                .storage-bar {{ background: #252525; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; }}
             </style>
             <script>
-                function ativarEdicao(i, grupo) {
+                function ativarEdicao(i, grupo) {{
                     document.getElementById('nome-txt-' + i + '-' + grupo).style.display = 'none';
                     document.getElementById('form-renomear-' + i + '-' + grupo).style.display = 'block';
-                }
-                function cancelarEdicao(i, grupo) {
+                }}
+                function cancelarEdicao(i, grupo) {{
                     document.getElementById('form-renomear-' + i + '-' + grupo).style.display = 'none';
                     document.getElementById('nome-txt-' + i + '-' + grupo).style.display = 'inline';
-                }
+                }}
+                function selecionarTodos(grupo, marcar) {{
+                    const checkboxes = document.querySelectorAll('input[name="selecionados"][form="form-' + grupo + '"]');
+                    checkboxes.forEach(cb => cb.checked = marcar);
+                }}
             </script>
         </head>
         <body>
@@ -300,82 +301,69 @@ def home():
                     <h2>TerminalTube 🚀</h2>
                     
                     <div class="storage-bar">
-                        <span>💾 <b>Armazenamento (/media):</b> __USADO_GB__ GB usados / __TOTAL_GB__ GB totais (<span style="color: #1db954;">__LIVRE_GB__ GB livres</span>)</span>
+                        <span>💾 <b>Armazenamento (/media):</b> {usado_gb:.1f} GB usados / {total_gb:.1f} GB totais (<span style="color: #1db954;">{livre_gb:.1f} GB livres</span>)</span>
                         <div style="background: #333; width: 150px; height: 8px; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 10px;">
-                            <div style="background: __COR_BARRA__; height: 100%; width: __PCT_USADO__%;"></div>
+                            <div style="background: {cor_barra}; height: 100%; width: {pct_usado:.1f}%;"></div>
                         </div>
                     </div>
 
-                    __PAINEL_DOWNLOAD__
+                    {painel_download}
                 </div>
 
                 <div class="card">
                     <div class="section-header">
-                        <h3 style="margin:0;">🎵 Músicas / Playlists (__LEN_MUSICAS__)</h3>
+                        <h3 style="margin:0;">🎵 Músicas / Playlists ({len(lista_musicas)})</h3>
                         <div class="actions-bar">
-                            <form id="form-musicas" action="/download-lote" method="post" style="margin:0;">
-                                <button type="submit" class="secondary-btn">Baixar Selecionados (.zip)</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)">[Tirar Todos]</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)">[Todos]</button>
+                            <form id="form-musicas" action="/download-lote" method="post" style="margin:0; display:inline;">
+                                <button type="submit" class="secondary-btn" style="background: #1db954; color: #fff;">Baixar Selecionados (.zip)</button>
                             </form>
-                            __LIMPAR_MUSICAS__
+                            {limpar_musicas}
                         </div>
                     </div>
                     <div class="file-list">
-                        <table>__TABELA_MUSICAS__</table>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="section-header">
-                        <h3 style="margin:0;">💿 Álbuns com Capítulos (__LEN_ALBUNS__)</h3>
-                        <div class="actions-bar">
-                            <form id="form-albuns" action="/download-lote" method="post" style="margin:0;">
-                                <button type="submit" class="secondary-btn">Baixar Selecionados (.zip)</button>
-                            </form>
-                            __LIMPAR_ALBUNS__
-                        </div>
-                    </div>
-                    <div class="file-list">
-                        <table>__TABELA_ALBUNS__</table>
+                        <table>{tabela_musicas}</table>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="section-header">
-                        <h3 style="margin:0;">🎬 Vídeos MP4 (__LEN_VIDEOS__)</h3>
+                        <h3 style="margin:0;">💿 Álbuns com Capítulos ({len(lista_albuns)})</h3>
                         <div class="actions-bar">
-                            <form id="form-videos" action="/download-lote" method="post" style="margin:0;">
-                                <button type="submit" class="secondary-btn">Baixar Selecionados (.zip)</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', false)">[Nenhum]</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', true)">[Todos]</button>
+                            <form id="form-albuns" action="/download-lote" method="post" style="margin:0; display:inline;">
+                                <button type="submit" class="secondary-btn" style="background: #1db954; color: #fff;">Baixar Selecionados (.zip)</button>
                             </form>
-                            __LIMPAR_VIDEOS__
+                            {limpar_albuns}
                         </div>
                     </div>
                     <div class="file-list">
-                        <table>__TABELA_VIDEOS__</table>
+                        <table>{tabela_albuns}</table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="section-header">
+                        <h3 style="margin:0;">🎬 Vídeos MP4 ({len(lista_videos)})</h3>
+                        <div class="actions-bar">
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', false)">[Nenhum]</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', true)">[Todos]</button>
+                            <form id="form-videos" action="/download-lote" method="post" style="margin:0; display:inline;">
+                                <button type="submit" class="secondary-btn" style="background: #1db954; color: #fff;">Baixar Selecionados (.zip)</button>
+                            </form>
+                            {limpar_videos}
+                        </div>
+                    </div>
+                    <div class="file-list">
+                        <table>{tabela_videos}</table>
                     </div>
                 </div>
             </div>
         </body>
     </html>
     """
-
-    return (html_template
-        .replace("__META_REFRESH__", meta_refresh)
-        .replace("__USADO_GB__", f"{usado_gb:.1f}")
-        .replace("__TOTAL_GB__", f"{total_gb:.1f}")
-        .replace("__LIVRE_GB__", f"{livre_gb:.1f}")
-        .replace("__COR_BARRA__", cor_barra)
-        .replace("__PCT_USADO__", f"{pct_usado:.1f}")
-        .replace("__PAINEL_DOWNLOAD__", painel_download)
-        .replace("__LEN_MUSICAS__", str(len(lista_musicas)))
-        .replace("__LIMPAR_MUSICAS__", limpar_musicas)
-        .replace("__TABELA_MUSICAS__", tabela_musicas)
-        .replace("__LEN_ALBUNS__", str(len(lista_albuns)))
-        .replace("__LIMPAR_ALBUNS__", limpar_albuns)
-        .replace("__TABELA_ALBUNS__", tabela_albuns)
-        .replace("__LEN_VIDEOS__", str(len(lista_videos)))
-        .replace("__LIMPAR_VIDEOS__", limpar_videos)
-        .replace("__TABELA_VIDEOS__", tabela_videos)
-    )
 
 @app.post("/baixar", response_class=HTMLResponse)
 def iniciar_download(background_tasks: BackgroundTasks, url: str = Form(...), modo: str = Form(...), qualidade: str = Form("192")):
