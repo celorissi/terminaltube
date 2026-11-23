@@ -1,6 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.4.6 (Com Seleção em Massa)
-# Data: Outubro 2026
+# TerminalTube - Versão 2.4.7 (Completa & Sem Cortes)
 # ==========================================
 
 from fastapi import FastAPI, BackgroundTasks, Form
@@ -31,10 +30,19 @@ estado_download = {
     "percentagem": "0%"
 }
 
+
+def _obter_formato_video(param_qualidade: str) -> str:
+    if param_qualidade == "720p":
+        return 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best'
+    elif param_qualidade == "480p":
+        return 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best'
+    return 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
+
+
 def executar_download(url: str, modo: str, param_qualidade: str = "192"):
     global processo_atual, estado_download
     estado_download = {"ativo": True, "mensagem": "A iniciar ligação ao YouTube...", "percentagem": "0%"}
-    
+
     if modo == "album":
         pasta_destino = DIRETORIO_ALBUNS
         cmd = [
@@ -50,19 +58,25 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
         ]
     elif modo == "video":
         pasta_destino = DIRETORIO_VIDEOS
-        if param_qualidade == "720p":
-            formato_str = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best'
-        elif param_qualidade == "480p":
-            formato_str = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best'
-        else:
-            formato_str = 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best'
-
+        formato_str = _obter_formato_video(param_qualidade)
         cmd = [
             BIN_YTDLP,
             '--no-playlist',
             '-f', formato_str,
             '--merge-output-format', 'mp4',
             '-o', os.path.join(pasta_destino, '%(title)s.%(ext)s'),
+            '--ignore-errors',
+            url
+        ]
+    elif modo == "video_playlist":
+        pasta_destino = DIRETORIO_VIDEOS
+        formato_str = _obter_formato_video(param_qualidade)
+        cmd = [
+            BIN_YTDLP,
+            '--yes-playlist',
+            '-f', formato_str,
+            '--merge-output-format', 'mp4',
+            '-o', os.path.join(pasta_destino, '%(playlist_index)s. %(title)s.%(ext)s'),
             '--ignore-errors',
             url
         ]
@@ -78,7 +92,7 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
             '--ignore-errors',
             url
         ]
-    else:
+    else:  # playlist_completa
         pasta_destino = DIRETORIO_MUSICAS
         cmd = [
             BIN_YTDLP,
@@ -94,13 +108,13 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
     os.makedirs(pasta_destino, exist_ok=True)
     try:
         processo_atual = subprocess.Popen(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.STDOUT, 
-            text=True, 
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
             bufsize=1
         )
-        
+
         for linha in iter(processo_atual.stdout.readline, ''):
             linha_limpa = linha.strip()
             if linha_limpa:
@@ -108,7 +122,7 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
                 match = re.search(r'(\d+\.\d+)%', linha_limpa)
                 if match:
                     estado_download["percentagem"] = f"{match.group(1)}%"
-                    
+
         processo_atual.wait()
     except Exception as e:
         estado_download["mensagem"] = f"Erro: {str(e)}"
@@ -116,12 +130,13 @@ def executar_download(url: str, modo: str, param_qualidade: str = "192"):
         processo_atual = None
         estado_download = {"ativo": False, "mensagem": "Concluído!", "percentagem": "100%"}
 
+
 @app.get("/", response_class=HTMLResponse)
 def home():
     os.makedirs(DIRETORIO_MUSICAS, exist_ok=True)
     os.makedirs(DIRETORIO_ALBUNS, exist_ok=True)
     os.makedirs(DIRETORIO_VIDEOS, exist_ok=True)
-    
+
     lista_musicas = glob.glob(os.path.join(DIRETORIO_MUSICAS, "*.mp3"))
     lista_albuns = glob.glob(os.path.join(DIRETORIO_ALBUNS, "*.mp3"))
     lista_videos = glob.glob(os.path.join(DIRETORIO_VIDEOS, "*.mp4"))
@@ -143,7 +158,7 @@ def home():
     def gerar_tabela(lista, nome_grupo):
         if not lista:
             return "<tr><td colspan='5' style='text-align: center; color: #777;'>Pasta vazia.</td></tr>"
-        
+
         html = ""
         for i, f in enumerate(sorted(lista), start=1):
             nome = os.path.basename(f)
@@ -210,8 +225,9 @@ def home():
                         <option value="playlist_completa">🎶 Áudio MP3: Playlist Completa</option>
                         <option value="album">💿 Áudio MP3: Álbum Completo (Com Capítulos)</option>
                         <option value="video">🎬 Vídeo MP4: Vídeo Único e Individual</option>
+                        <option value="video_playlist">🎞️ Vídeo MP4: Playlist Completa</option>
                     </select>
-                    
+
                     <select name="qualidade" id="audio-qualidade" style="flex: 1;">
                         <option value="192">Áudio Padrão (192 kbps)</option>
                         <option value="320">Alta Fidelidade (320 kbps)</option>
@@ -230,8 +246,8 @@ def home():
                     const modo = document.getElementById('modo-select').value;
                     const audioSelect = document.getElementById('audio-qualidade');
                     const videoSelect = document.getElementById('video-qualidade');
-                    
-                    if (modo === 'video') {
+
+                    if (modo === 'video' || modo === 'video_playlist') {
                         audioSelect.style.display = 'none';
                         audioSelect.name = 'ignorar';
                         videoSelect.style.display = 'block';
@@ -299,7 +315,7 @@ def home():
             <div class="container">
                 <div class="card">
                     <h2>TerminalTube 🚀</h2>
-                    
+
                     <div class="storage-bar">
                         <span>💾 <b>Armazenamento (/media):</b> {usado_gb:.1f} GB usados / {total_gb:.1f} GB totais (<span style="color: #1db954;">{livre_gb:.1f} GB livres</span>)</span>
                         <div style="background: #333; width: 150px; height: 8px; border-radius: 4px; overflow: hidden; display: inline-block; vertical-align: middle; margin-left: 10px;">
@@ -314,7 +330,7 @@ def home():
                     <div class="section-header">
                         <h3 style="margin:0;">🎵 Músicas / Playlists ({len(lista_musicas)})</h3>
                         <div class="actions-bar">
-                            <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)">[Tirar Todos]</button>
+                            <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', false)">[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)">[Todos]</button>
                             <form id="form-musicas" action="/download-lote" method="post" style="margin:0; display:inline;">
                                 <button type="submit" class="secondary-btn" style="background: #1db954; color: #fff;">Baixar Selecionados (.zip)</button>
@@ -365,10 +381,12 @@ def home():
     </html>
     """
 
+
 @app.post("/baixar", response_class=HTMLResponse)
 def iniciar_download(background_tasks: BackgroundTasks, url: str = Form(...), modo: str = Form(...), qualidade: str = Form("192")):
     background_tasks.add_task(executar_download, url, modo, qualidade)
     return RedirectResponse(url="/", status_code=303)
+
 
 @app.post("/parar")
 def parar_download():
@@ -382,12 +400,14 @@ def parar_download():
     estado_download = {"ativo": False, "mensagem": "Cancelado pelo utilizador", "percentagem": "0%"}
     return RedirectResponse(url="/", status_code=303)
 
+
 @app.get("/download")
 def descarregar_ficheiro(caminho: str):
     if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
         media_type = 'video/mp4' if caminho.endswith('.mp4') else 'audio/mpeg'
         return FileResponse(caminho, media_type=media_type, filename=os.path.basename(caminho))
     return RedirectResponse(url="/", status_code=303)
+
 
 @app.post("/renomear")
 def renomear_ficheiro(caminho_antigo: str = Form(...), novo_nome: str = Form(...)):
@@ -399,6 +419,7 @@ def renomear_ficheiro(caminho_antigo: str = Form(...), novo_nome: str = Form(...
             os.rename(caminho_antigo, caminho_novo)
     return RedirectResponse(url="/", status_code=303)
 
+
 @app.post("/download-lote")
 def descarregar_lote(selecionados: list[str] = Form(...)):
     zip_buffer = io.BytesIO()
@@ -406,7 +427,7 @@ def descarregar_lote(selecionados: list[str] = Form(...)):
         for caminho in selecionados:
             if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
                 zip_file.write(caminho, arcname=os.path.basename(caminho))
-    
+
     zip_buffer.seek(0)
     return StreamingResponse(
         zip_buffer,
@@ -414,11 +435,13 @@ def descarregar_lote(selecionados: list[str] = Form(...)):
         headers={"Content-Disposition": "attachment; filename=terminaltube-selecionada.zip"}
     )
 
+
 @app.get("/apagar")
 def apagar_ficheiro(caminho: str):
     if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
         os.remove(caminho)
     return RedirectResponse(url="/", status_code=303)
+
 
 @app.post("/limpar-pasta")
 def limpar_pasta(pasta: str = Form(...)):
@@ -431,7 +454,7 @@ def limpar_pasta(pasta: str = Form(...)):
     else:
         dir_alvo = DIRETORIO_VIDEOS
         ext = "*.mp4"
-        
+
     for f in glob.glob(os.path.join(dir_alvo, ext)):
         os.remove(f)
     return RedirectResponse(url="/", status_code=303)
