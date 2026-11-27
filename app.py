@@ -1,5 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.5.2 (Download Sequencial Sem ZIP)
+# TerminalTube - Versão 2.5.3 (Seções Recolhíveis / Acordeão)
 # ==========================================
 
 from fastapi import FastAPI, BackgroundTasks, Form
@@ -411,8 +411,8 @@ def home():
             <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23121212%22/><text x=%2250%%22 y=%2262%%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22monospace%22 font-weight=%22bold%22 font-size=%2250%22 fill=%22%231db954%22>%3E_</text></svg>">
             <style>
                 body {{ font-family: Arial, sans-serif; background: #121212; color: #fff; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box; }}
-                .container {{ max-width: 950px; width: 100%; display: flex; flex-direction: column; gap: 20px; }}
-                .card {{ background: #1e1e1e; padding: 24px; border-radius: 12px; border: 1px solid #2a2a2a; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }}
+                .container {{ max-width: 950px; width: 100%; display: flex; flex-direction: column; gap: 18px; }}
+                .card {{ background: #1e1e1e; padding: 22px 24px; border-radius: 12px; border: 1px solid #2a2a2a; box-shadow: 0 4px 15px rgba(0,0,0,0.6); }}
                 h2, h3 {{ margin-top: 0; color: #1db954; text-align: center; }}
                 h3 {{ text-align: left; font-size: 16px; color: #fff; }}
                 input[type="text"], textarea, select {{ width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #3d3d3d; background: #292929; color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 14px; transition: border-color 0.2s; }}
@@ -424,6 +424,8 @@ def home():
                 button:disabled {{ opacity: 0.4; cursor: not-allowed; }}
                 .secondary-btn {{ background: #303030; font-size: 12.5px; padding: 6px 12px; width: auto; margin: 0; border: 1px solid #3e3e3e; }}
                 .secondary-btn:hover:not(:disabled) {{ background: #3d3d3d; }}
+                .toggle-btn {{ background: #242424; color: #1db954; border: 1px solid #383838; font-size: 12px; padding: 6px 11px; width: auto; margin: 0; }}
+                .toggle-btn:hover {{ background: #2c2c2c; }}
                 .zip-btn {{ background: #1db954; color: #fff; border: none; }}
                 .danger-btn {{ background: #d9534f !important; border: none !important; }}
                 .danger-btn:hover:not(:disabled) {{ background: #c9302c !important; }}
@@ -439,7 +441,10 @@ def home():
                 th, td {{ padding: 8px; border-bottom: 1px solid #2d2d2d; text-align: left; }}
                 .file-row:hover {{ background: #252525; }}
                 .file-list {{ max-height: 220px; overflow-y: auto; }}
-                .section-header {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; border-bottom: 1px solid #2e2e2e; padding-bottom: 10px; }}
+                .section-header {{ display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }}
+                .section-title-group {{ display: flex; align-items: center; gap: 10px; cursor: pointer; }}
+                .section-body {{ display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #2e2e2e; }}
+                .section-body.open {{ display: block; }}
                 .actions-bar {{ display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }}
                 .storage-bar {{ background: #242424; padding: 11px 15px; border-radius: 8px; margin-bottom: 16px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 1px solid #313131; }}
                 .action-link {{ text-decoration: none; font-weight: bold; font-size: 12px; }}
@@ -452,6 +457,14 @@ def home():
                 }}
             </style>
             <script>
+                function alternarSecao(grupo) {{
+                    const bodyEl = document.getElementById('corpo-' + grupo);
+                    const btnEl = document.getElementById('btn-toggle-' + grupo);
+                    if (!bodyEl || !btnEl) return;
+                    const vaiAbrir = !bodyEl.classList.contains('open');
+                    bodyEl.classList.toggle('open', vaiAbrir);
+                    btnEl.textContent = vaiAbrir ? '▾ [Recolher]' : '▸ [Expandir]';
+                }}
                 function ativarEdicao(i, grupo) {{
                     document.getElementById('nome-txt-' + i + '-' + grupo).style.display = 'none';
                     document.getElementById('form-renomear-' + i + '-' + grupo).style.display = 'block';
@@ -513,7 +526,10 @@ def home():
 
                 <div class="card">
                     <div class="section-header">
-                        <h3 style="margin:0;">🎵 Músicas / Playlists ({len(lista_musicas)})</h3>
+                        <div class="section-title-group" onclick="alternarSecao('musicas')">
+                            <button type="button" id="btn-toggle-musicas" class="toggle-btn" onclick="event.stopPropagation(); alternarSecao('musicas')">▸ [Expandir]</button>
+                            <h3 style="margin:0;">🎵 Músicas / Playlists ({len(lista_musicas)})</h3>
+                        </div>
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', false)" {disabled_attr_musicas}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)" {disabled_attr_musicas}>[Todos]</button>
@@ -521,15 +537,20 @@ def home():
                             {limpar_musicas}
                         </div>
                     </div>
-                    <input type="text" class="filter-input" placeholder="Filtrar músicas nesta pasta..." oninput="filtrarTabela('musicas', this.value)">
-                    <div class="file-list">
-                        <table id="tabela-musicas">{tabela_musicas}</table>
+                    <div id="corpo-musicas" class="section-body">
+                        <input type="text" class="filter-input" placeholder="Filtrar músicas nesta pasta..." oninput="filtrarTabela('musicas', this.value)">
+                        <div class="file-list">
+                            <table id="tabela-musicas">{tabela_musicas}</table>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="section-header">
-                        <h3 style="margin:0;">💿 Álbuns com Capítulos ({len(lista_albuns)})</h3>
+                        <div class="section-title-group" onclick="alternarSecao('albuns')">
+                            <button type="button" id="btn-toggle-albuns" class="toggle-btn" onclick="event.stopPropagation(); alternarSecao('albuns')">▸ [Expandir]</button>
+                            <h3 style="margin:0;">💿 Álbuns com Capítulos ({len(lista_albuns)})</h3>
+                        </div>
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', false)" {disabled_attr_albuns}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', true)" {disabled_attr_albuns}>[Todos]</button>
@@ -537,15 +558,20 @@ def home():
                             {limpar_albuns}
                         </div>
                     </div>
-                    <input type="text" class="filter-input" placeholder="Filtrar álbuns nesta pasta..." oninput="filtrarTabela('albuns', this.value)">
-                    <div class="file-list">
-                        <table id="tabela-albuns">{tabela_albuns}</table>
+                    <div id="corpo-albuns" class="section-body">
+                        <input type="text" class="filter-input" placeholder="Filtrar álbuns nesta pasta..." oninput="filtrarTabela('albuns', this.value)">
+                        <div class="file-list">
+                            <table id="tabela-albuns">{tabela_albuns}</table>
+                        </div>
                     </div>
                 </div>
 
                 <div class="card">
                     <div class="section-header">
-                        <h3 style="margin:0;">🎬 Vídeos MP4 ({len(lista_videos)})</h3>
+                        <div class="section-title-group" onclick="alternarSecao('videos')">
+                            <button type="button" id="btn-toggle-videos" class="toggle-btn" onclick="event.stopPropagation(); alternarSecao('videos')">▸ [Expandir]</button>
+                            <h3 style="margin:0;">🎬 Vídeos MP4 ({len(lista_videos)})</h3>
+                        </div>
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', false)" {disabled_attr_videos}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', true)" {disabled_attr_videos}>[Todos]</button>
@@ -553,9 +579,11 @@ def home():
                             {limpar_videos}
                         </div>
                     </div>
-                    <input type="text" class="filter-input" placeholder="Filtrar vídeos nesta pasta..." oninput="filtrarTabela('videos', this.value)">
-                    <div class="file-list">
-                        <table id="tabela-videos">{tabela_videos}</table>
+                    <div id="corpo-videos" class="section-body">
+                        <input type="text" class="filter-input" placeholder="Filtrar vídeos nesta pasta..." oninput="filtrarTabela('videos', this.value)">
+                        <div class="file-list">
+                            <table id="tabela-videos">{tabela_videos}</table>
+                        </div>
                     </div>
                 </div>
             </div>
