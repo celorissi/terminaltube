@@ -1,5 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.5.3 (Seções Recolhíveis / Acordeão)
+# TerminalTube - Versão 2.5.4 (Download Sequencial Estável & Seguro)
 # ==========================================
 
 from fastapi import FastAPI, BackgroundTasks, Form
@@ -11,6 +11,7 @@ import zipfile
 import io
 import re
 import shutil
+import html as html_lib
 from urllib.parse import quote
 
 app = FastAPI()
@@ -30,6 +31,16 @@ estado_download = {
     "mensagem": "A aguardar...",
     "percentagem": "0%"
 }
+
+
+def _caminho_seguro(caminho: str) -> str | None:
+    if not caminho:
+        return None
+    raiz_real = os.path.realpath(DIRETORIO_RAIZ)
+    alvo_real = os.path.realpath(caminho)
+    if alvo_real == raiz_real or alvo_real.startswith(raiz_real + os.sep):
+        return alvo_real
+    return None
 
 
 def _obter_formato_video(param_qualidade: str) -> str:
@@ -202,17 +213,21 @@ def home():
         html = ""
         for i, f in enumerate(sorted(lista), start=1):
             nome = os.path.basename(f)
+            nome_esc = html_lib.escape(nome, quote=True)
+            caminho_esc = html_lib.escape(f, quote=True)
             tamanho = os.path.getsize(f) / (1024 * 1024)
             caminho_encoded = quote(f, safe="")
             html += f"""
-                <tr class="file-row" data-name="{nome.lower()}">
-                    <td style="width: 32px; text-align: center;"><input type="checkbox" name="selecionados" data-grupo="{nome_grupo}" value="{caminho_encoded}" style="cursor: pointer;"></td>
+                <tr class="file-row" data-name="{html_lib.escape(nome.lower(), quote=True)}">
+                    <td style="width: 32px; text-align: center;">
+                        <input type="checkbox" name="selecionados" data-grupo="{nome_grupo}" data-caminho="{caminho_esc}" value="{caminho_esc}" style="cursor: pointer;">
+                    </td>
                     <td style="width: 34px; color: #1db954; font-weight: bold;">{i}.</td>
                     <td>
-                        <span id="nome-txt-{i}-{nome_grupo}" style="word-break: break-word;">{nome}</span>
+                        <span id="nome-txt-{i}-{nome_grupo}" style="word-break: break-word;">{nome_esc}</span>
                         <form action="/renomear" method="post" id="form-renomear-{i}-{nome_grupo}" style="display:none; margin-top: 6px;">
-                            <input type="hidden" name="caminho_antigo" value="{f}">
-                            <input type="text" name="novo_nome" value="{nome}" style="padding: 5px 8px; font-size: 12px; width: 68%; display: inline-block; margin: 0;">
+                            <input type="hidden" name="caminho_antigo" value="{caminho_esc}">
+                            <input type="text" name="novo_nome" value="{nome_esc}" style="padding: 5px 8px; font-size: 12px; width: 68%; display: inline-block; margin: 0;">
                             <button type="submit" style="padding: 5px 10px; font-size: 11px; width: auto; margin: 0;">Guardar</button>
                             <button type="button" onclick="cancelarEdicao({i}, '{nome_grupo}')" class="danger-btn" style="padding: 5px 10px; font-size: 11px; width: auto; margin: 0;">X</button>
                         </form>
@@ -249,7 +264,7 @@ def home():
                     <div id="status-bar" style="background: #1db954; height: 100%; width: {pct_num}%; transition: width 0.4s ease;"></div>
                 </div>
                 <div id="status-msg" class="log-box">
-                    {estado_download['mensagem']}
+                    {html_lib.escape(estado_download['mensagem'])}
                 </div>
                 <form action="/parar" method="post" style="margin:0; text-align: center;">
                     <button type="submit" class="danger-btn" style="width: auto; padding: 8px 20px;">Parar / Cancelar Download</button>
@@ -457,6 +472,8 @@ def home():
                 }}
             </style>
             <script>
+                let filaDownloadEmAndamento = false;
+
                 function alternarSecao(grupo) {{
                     const bodyEl = document.getElementById('corpo-' + grupo);
                     const btnEl = document.getElementById('btn-toggle-' + grupo);
@@ -483,20 +500,29 @@ def home():
                     }});
                 }}
                 function baixarSelecionadosSequencial(grupo) {{
+                    if (filaDownloadEmAndamento) {{
+                        alert('Já existe uma fila de downloads em andamento.');
+                        return;
+                    }}
                     const checkboxes = Array.from(document.querySelectorAll('input[name="selecionados"][data-grupo="' + grupo + '"]:checked'));
                     if (checkboxes.length === 0) {{
                         alert('Selecione pelo menos um arquivo para baixar.');
                         return;
                     }}
+                    filaDownloadEmAndamento = true;
                     checkboxes.forEach((cb, idx) => {{
                         setTimeout(() => {{
+                            const caminho = cb.dataset.caminho || '';
                             const link = document.createElement('a');
-                            link.href = '/download?caminho=' + cb.value;
+                            link.href = '/download?caminho=' + encodeURIComponent(caminho);
                             link.style.display = 'none';
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
-                        }}, idx * 350);
+                            if (idx === checkboxes.length - 1) {{
+                                filaDownloadEmAndamento = false;
+                            }}
+                        }}, idx * 900);
                     }});
                 }}
                 function filtrarTabela(grupo, termo) {{
@@ -627,20 +653,23 @@ def parar_download():
 
 @app.get("/download")
 def descarregar_ficheiro(caminho: str):
-    if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
-        media_type = 'video/mp4' if caminho.endswith('.mp4') else 'audio/mpeg'
-        return FileResponse(caminho, media_type=media_type, filename=os.path.basename(caminho))
+    alvo_real = _caminho_seguro(caminho)
+    if alvo_real and os.path.isfile(alvo_real):
+        media_type = 'video/mp4' if alvo_real.endswith('.mp4') else 'audio/mpeg'
+        return FileResponse(alvo_real, media_type=media_type, filename=os.path.basename(alvo_real))
     return RedirectResponse(url="/", status_code=303)
 
 
 @app.post("/renomear")
 def renomear_ficheiro(caminho_antigo: str = Form(...), novo_nome: str = Form(...)):
-    if caminho_antigo.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho_antigo):
-        diretorio = os.path.dirname(caminho_antigo)
-        novo_nome_limpo = os.path.basename(novo_nome)
-        caminho_novo = os.path.join(diretorio, novo_nome_limpo)
-        if not os.path.exists(caminho_novo):
-            os.rename(caminho_antigo, caminho_novo)
+    alvo_real = _caminho_seguro(caminho_antigo)
+    if alvo_real and os.path.isfile(alvo_real):
+        diretorio = os.path.dirname(alvo_real)
+        novo_nome_limpo = os.path.basename(novo_nome).strip()
+        if novo_nome_limpo:
+            caminho_novo = os.path.join(diretorio, novo_nome_limpo)
+            if not os.path.exists(caminho_novo):
+                os.rename(alvo_real, caminho_novo)
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -649,10 +678,11 @@ def descarregar_lote(selecionados: list[str] = Form(default=[])):
     if not selecionados:
         return RedirectResponse(url="/", status_code=303)
     zip_buffer = io.BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zip_file:
         for caminho in selecionados:
-            if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
-                zip_file.write(caminho, arcname=os.path.basename(caminho))
+            alvo_real = _caminho_seguro(caminho)
+            if alvo_real and os.path.isfile(alvo_real):
+                zip_file.write(alvo_real, arcname=os.path.basename(alvo_real))
 
     zip_buffer.seek(0)
     return StreamingResponse(
@@ -664,8 +694,9 @@ def descarregar_lote(selecionados: list[str] = Form(default=[])):
 
 @app.get("/apagar")
 def apagar_ficheiro(caminho: str):
-    if caminho.startswith(DIRETORIO_RAIZ) and os.path.exists(caminho):
-        os.remove(caminho)
+    alvo_real = _caminho_seguro(caminho)
+    if alvo_real and os.path.isfile(alvo_real):
+        os.remove(alvo_real)
     return RedirectResponse(url="/", status_code=303)
 
 
@@ -682,5 +713,7 @@ def limpar_pasta(pasta: str = Form(...)):
         ext = "*.mp4"
 
     for f in glob.glob(os.path.join(dir_alvo, ext)):
-        os.remove(f)
+        alvo_real = _caminho_seguro(f)
+        if alvo_real and os.path.isfile(alvo_real):
+            os.remove(alvo_real)
     return RedirectResponse(url="/", status_code=303)
