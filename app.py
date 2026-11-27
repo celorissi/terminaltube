@@ -1,5 +1,5 @@
 # ==========================================
-# TerminalTube - Versão 2.5.0 (Visual Modernizado & Fila em Lote)
+# TerminalTube - Versão 2.5.2 (Download Sequencial Sem ZIP)
 # ==========================================
 
 from fastapi import FastAPI, BackgroundTasks, Form
@@ -11,6 +11,7 @@ import zipfile
 import io
 import re
 import shutil
+from urllib.parse import quote
 
 app = FastAPI()
 
@@ -202,9 +203,10 @@ def home():
         for i, f in enumerate(sorted(lista), start=1):
             nome = os.path.basename(f)
             tamanho = os.path.getsize(f) / (1024 * 1024)
+            caminho_encoded = quote(f, safe="")
             html += f"""
                 <tr class="file-row" data-name="{nome.lower()}">
-                    <td style="width: 32px; text-align: center;"><input type="checkbox" name="selecionados" value="{f}" form="form-{nome_grupo}" style="cursor: pointer;"></td>
+                    <td style="width: 32px; text-align: center;"><input type="checkbox" name="selecionados" data-grupo="{nome_grupo}" value="{caminho_encoded}" style="cursor: pointer;"></td>
                     <td style="width: 34px; color: #1db954; font-weight: bold;">{i}.</td>
                     <td>
                         <span id="nome-txt-{i}-{nome_grupo}" style="word-break: break-word;">{nome}</span>
@@ -218,8 +220,8 @@ def home():
                     <td style="color: #999; text-align: right; width: 78px; font-family: monospace;">{tamanho:.1f} MB</td>
                     <td style="text-align: right; width: 205px; white-space: nowrap;">
                         <button type="button" onclick="ativarEdicao({i}, '{nome_grupo}')" class="secondary-btn" style="padding: 4px 8px; font-size: 11px;">[Renomear]</button>
-                        <a href="/download?caminho={f}" class="action-link download-link">[Baixar]</a>
-                        <a href="/apagar?caminho={f}" class="action-link delete-link">[Apagar]</a>
+                        <a href="/download?caminho={caminho_encoded}" class="action-link download-link">[Baixar]</a>
+                        <a href="/apagar?caminho={caminho_encoded}" class="action-link delete-link">[Apagar]</a>
                     </td>
                 </tr>
             """
@@ -279,8 +281,8 @@ def home():
         """
     else:
         painel_download = """
-            <form action="/baixar" method="post">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <form id="form-download" action="/baixar" method="post" onsubmit="return validarFormularioDownload()">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 8px;">
                     <div style="display: flex; gap: 8px;">
                         <button type="button" id="tab-single" class="mode-pill active" onclick="alternarEntrada('single')">Link Único</button>
                         <button type="button" id="tab-multi" class="mode-pill" onclick="alternarEntrada('multi')">Vários Links (1 por linha)</button>
@@ -291,7 +293,7 @@ def home():
                     </div>
                 </div>
 
-                <input type="text" id="url-single" name="url" placeholder="Cole o link do vídeo ou playlist..." required autocomplete="off">
+                <input type="text" id="url-single" name="url" placeholder="Cole o link do vídeo ou playlist..." autocomplete="off">
                 <textarea id="url-multi" name="urls_lote" rows="4" placeholder="Cole vários links, um por linha (ex.: vários vídeos do OK.ru ou YouTube)..." style="display: none;"></textarea>
 
                 <div class="controls-row">
@@ -343,19 +345,29 @@ def home():
 
                     if (tipo === 'multi') {
                         singleEl.style.display = 'none';
-                        singleEl.required = false;
                         multiEl.style.display = 'block';
-                        multiEl.required = true;
                         tabMulti.classList.add('active');
                         tabSingle.classList.remove('active');
+                        multiEl.focus();
                     } else {
                         multiEl.style.display = 'none';
-                        multiEl.required = false;
                         singleEl.style.display = 'block';
-                        singleEl.required = true;
                         tabSingle.classList.add('active');
                         tabMulti.classList.remove('active');
+                        singleEl.focus();
                     }
+                }
+
+                function validarFormularioDownload() {
+                    const isMulti = document.getElementById('url-multi').style.display !== 'none';
+                    const valor = isMulti
+                        ? document.getElementById('url-multi').value.trim()
+                        : document.getElementById('url-single').value.trim();
+                    if (!valor) {
+                        alert('Cole pelo menos um link antes de iniciar o download.');
+                        return false;
+                    }
+                    return true;
                 }
 
                 async function colarUrl() {
@@ -449,12 +461,29 @@ def home():
                     document.getElementById('nome-txt-' + i + '-' + grupo).style.display = 'inline';
                 }}
                 function selecionarTodos(grupo, marcar) {{
-                    const checkboxes = document.querySelectorAll('input[name="selecionados"][form="form-' + grupo + '"]');
+                    const checkboxes = document.querySelectorAll('input[name="selecionados"][data-grupo="' + grupo + '"]');
                     checkboxes.forEach(cb => {{
                         const row = cb.closest('tr');
                         if (!row || row.style.display !== 'none') {{
                             cb.checked = marcar;
                         }}
+                    }});
+                }}
+                function baixarSelecionadosSequencial(grupo) {{
+                    const checkboxes = Array.from(document.querySelectorAll('input[name="selecionados"][data-grupo="' + grupo + '"]:checked'));
+                    if (checkboxes.length === 0) {{
+                        alert('Selecione pelo menos um arquivo para baixar.');
+                        return;
+                    }}
+                    checkboxes.forEach((cb, idx) => {{
+                        setTimeout(() => {{
+                            const link = document.createElement('a');
+                            link.href = '/download?caminho=' + cb.value;
+                            link.style.display = 'none';
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }}, idx * 350);
                     }});
                 }}
                 function filtrarTabela(grupo, termo) {{
@@ -488,9 +517,7 @@ def home():
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', false)" {disabled_attr_musicas}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('musicas', true)" {disabled_attr_musicas}>[Todos]</button>
-                            <form id="form-musicas" action="/download-lote" method="post" style="margin:0; display:inline;">
-                                <button type="submit" class="secondary-btn zip-btn" {disabled_attr_musicas}>Baixar Selecionados (.zip)</button>
-                            </form>
+                            <button type="button" class="secondary-btn zip-btn" onclick="baixarSelecionadosSequencial('musicas')" {disabled_attr_musicas}>Baixar Selecionados</button>
                             {limpar_musicas}
                         </div>
                     </div>
@@ -506,9 +533,7 @@ def home():
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', false)" {disabled_attr_albuns}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('albuns', true)" {disabled_attr_albuns}>[Todos]</button>
-                            <form id="form-albuns" action="/download-lote" method="post" style="margin:0; display:inline;">
-                                <button type="submit" class="secondary-btn zip-btn" {disabled_attr_albuns}>Baixar Selecionados (.zip)</button>
-                            </form>
+                            <button type="button" class="secondary-btn zip-btn" onclick="baixarSelecionadosSequencial('albuns')" {disabled_attr_albuns}>Baixar Selecionados</button>
                             {limpar_albuns}
                         </div>
                     </div>
@@ -524,9 +549,7 @@ def home():
                         <div class="actions-bar">
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', false)" {disabled_attr_videos}>[Nenhum]</button>
                             <button type="button" class="secondary-btn" onclick="selecionarTodos('videos', true)" {disabled_attr_videos}>[Todos]</button>
-                            <form id="form-videos" action="/download-lote" method="post" style="margin:0; display:inline;">
-                                <button type="submit" class="secondary-btn zip-btn" {disabled_attr_videos}>Baixar Selecionados (.zip)</button>
-                            </form>
+                            <button type="button" class="secondary-btn zip-btn" onclick="baixarSelecionadosSequencial('videos')" {disabled_attr_videos}>Baixar Selecionados</button>
                             {limpar_videos}
                         </div>
                     </div>
@@ -594,7 +617,9 @@ def renomear_ficheiro(caminho_antigo: str = Form(...), novo_nome: str = Form(...
 
 
 @app.post("/download-lote")
-def descarregar_lote(selecionados: list[str] = Form(...)):
+def descarregar_lote(selecionados: list[str] = Form(default=[])):
+    if not selecionados:
+        return RedirectResponse(url="/", status_code=303)
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for caminho in selecionados:
